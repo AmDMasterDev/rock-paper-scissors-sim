@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <style>
+    #gameCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+  </style>
+  <body>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+      class GameObject {
+        constructor(x, y, type) {
+          this.x = x;
+          this.y = y;
+          this.type = type; // "rock", "paper", or "scissors"
+          this.dx = Math.random() * 2 - 1; // Horizontal velocity
+          this.dy = Math.random() * 2 - 1; // Vertical velocity
+        }
+      }
+
+      window.onload = function () {
+        let num = window.prompt(
+          "How many objects of each type would you like to spawn?"
+        );
+
+        let canvas = document.getElementById("gameCanvas");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        if (num !== null) {
+          spawnObjects(num);
+        }
+      };
+
+      let objects = [];
+
+      function spawnObjects(num) {
+        objects = []; // Clear the existing objects
+
+        for (let i = 0; i < num; i++) {
+          // Spawn a rock
+          objects.push(
+            new GameObject(
+              Math.random() * window.innerWidth,
+              Math.random() * window.innerHeight,
+              "rock"
+            )
+          );
+
+          // Spawn a paper
+          objects.push(
+            new GameObject(
+              Math.random() * window.innerWidth,
+              Math.random() * window.innerHeight,
+              "paper"
+            )
+          );
+
+          // Spawn a scissors
+          objects.push(
+            new GameObject(
+              Math.random() * window.innerWidth,
+              Math.random() * window.innerHeight,
+              "scissors"
+            )
+          );
+        }
+      }
+
+      function checkCollision() {
+        for (let i = 0; i < objects.length; i++) {
+          for (let j = i + 1; j < objects.length; j++) {
+            let obj1 = objects[i];
+            let obj2 = objects[j];
+            let distance = Math.sqrt(
+              Math.pow(obj2.x - obj1.x, 2) + Math.pow(obj2.y - obj1.y, 2)
+            );
+
+            if (distance < 50) {
+              // Change this value based on how close you want them to be to "fight"
+              fight(obj1, obj2);
+            }
+          }
+        }
+      }
+
+      function fight(obj1, obj2) {
+        if (
+          (obj1.type === "rock" && obj2.type === "scissors") ||
+          (obj1.type === "scissors" && obj2.type === "paper") ||
+          (obj1.type === "paper" && obj2.type === "rock")
+        ) {
+          obj2.type = obj1.type;
+        } else if (obj2.type !== obj1.type) {
+          obj1.type = obj2.type;
+        }
+      }
+
+      function moveAndDraw() {
+        let canvas = document.getElementById("gameCanvas");
+        let ctx = canvas.getContext("2d");
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let obj of objects) {
+          // Move the object in its current direction
+          obj.x += obj.dx;
+          obj.y += obj.dy;
+
+          // If the object hits the edge of the canvas, make it bounce back
+          if (obj.x < 0 || obj.x > canvas.width) {
+            obj.dx = -obj.dx;
+          }
+          if (obj.y < 0 || obj.y > canvas.height) {
+            obj.dy = -obj.dy;
+          }
+
+          // Draw the object
+          ctx.beginPath();
+          ctx.arc(obj.x, obj.y, 20, 0, Math.PI * 2); // Change these numbers to adjust the size of the objects
+          if (obj.type === "rock") {
+            ctx.fillStyle = "red";
+          } else if (obj.type === "paper") {
+            ctx.fillStyle = "green";
+          } else if (obj.type === "scissors") {
+            ctx.fillStyle = "blue";
+          }
+          ctx.fill();
+
+          // Draw the object's type above it
+          ctx.font = "14px Arial";
+          ctx.fillStyle = "black";
+          ctx.textAlign = "center";
+          ctx.fillText(obj.type, obj.x, obj.y - 25); // 30 pixels above the object
+        }
+      }
+
+      // Call these functions every frame
+      setInterval(function () {
+        moveAndDraw();
+        checkCollision();
+      }, 1000 / 60); // 60 FPS
+    </script>
+  </body>
+</html>
