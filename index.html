@@ -7,12 +7,18 @@
 
     #gameCanvas {
       position: absolute;
-      top: 10%;
-      left: 10%;
+      top: 0;
+      left: 0;
     }
   </style>
   <body>
     <canvas id="gameCanvas"></canvas>
+    <!-- <div
+      id="counts"
+      style="display: flex; position: absolute; bottom: 0; left: 5%; width: 90%"
+    >
+      The counts will be inserted here by the JavaScript code
+    </div> -->
 
     <script>
       class GameObject {
@@ -22,6 +28,8 @@
           this.type = type; // "rock", "paper", or "scissors"
           this.dx = Math.random() * 2 - 1; // Horizontal velocity
           this.dy = Math.random() * 2 - 1; // Vertical velocity
+          this.state = "free"; // The object is initially free to move wherever it wants
+          this.flockStrength = 1; // Start with a strength of 1
           this.targetDirection = {
             dx: Math.random() * 2 - 1,
             dy: Math.random() * 2 - 1,
@@ -46,8 +54,8 @@
         );
 
         let canvas = document.getElementById("gameCanvas");
-        canvas.width = window.innerWidth * 0.8;
-        canvas.height = window.innerHeight * 0.8;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
         if (num !== null) {
           spawnObjects(num);
@@ -55,43 +63,21 @@
       };
 
       let objects = [];
+      let safeZone = { x: 0, y: 0 }; // Position of the safe zone
 
       function spawnObjects(num) {
         objects = []; // Clear the existing objects
 
         let canvas = document.getElementById("gameCanvas");
-        let spawnAreaX = canvas.width * 0.8; // 80% of canvas width
-        let spawnAreaY = canvas.height * 0.8; // 80% of canvas height
-        let offsetX = canvas.width * 0.1; // 10% of canvas width
-        let offsetY = canvas.height * 0.1; // 10% of canvas height
+        let types = ["rock", "paper", "scissors"];
+        let numObjects = num;
 
-        for (let i = 0; i < num; i++) {
-          // Spawn a rock
-          objects.push(
-            new GameObject(
-              Math.random() * spawnAreaX + offsetX,
-              Math.random() * spawnAreaY + offsetY,
-              "rock"
-            )
-          );
-
-          // Spawn a paper
-          objects.push(
-            new GameObject(
-              Math.random() * spawnAreaX + offsetX,
-              Math.random() * spawnAreaY + offsetY,
-              "paper"
-            )
-          );
-
-          // Spawn a scissors
-          objects.push(
-            new GameObject(
-              Math.random() * spawnAreaX + offsetX,
-              Math.random() * spawnAreaY + offsetY,
-              "scissors"
-            )
-          );
+        for (let i = 0; i < numObjects; i++) {
+          for (let type of types) {
+            let x = Math.random() * canvas.width;
+            let y = Math.random() * canvas.height;
+            objects.push(new GameObject(x, y, type));
+          }
         }
       }
 
@@ -110,40 +96,6 @@
 
             if (distance < 40) {
               // Considering the radius of the objects
-              let angle = Math.atan2(obj2.y - obj1.y, obj2.x - obj1.x);
-
-              obj1.dx = -Math.cos(angle);
-              obj1.dy = -Math.sin(angle);
-
-              obj2.dx = Math.cos(angle);
-              obj2.dy = Math.sin(angle);
-
-              obj1.squishing = true;
-              obj1.squishStart = Date.now();
-
-              obj2.squishing = true;
-              obj2.squishStart = Date.now();
-
-              setTimeout(() => {
-                obj1.squishing = false;
-                obj2.squishing = false;
-              }, 100);
-
-              let averageDirectionX =
-                (obj1.targetDirection.dx + obj2.targetDirection.dx) / 2;
-              let averageDirectionY =
-                (obj1.targetDirection.dy + obj2.targetDirection.dy) / 2;
-
-              obj1.targetDirection.dx =
-                averageDirectionX + Math.random() * 0.2 - 0.1;
-              obj1.targetDirection.dy =
-                averageDirectionY + Math.random() * 0.2 - 0.1;
-
-              obj2.targetDirection.dx =
-                averageDirectionX + Math.random() * 0.2 - 0.1;
-              obj2.targetDirection.dy =
-                averageDirectionY + Math.random() * 0.2 - 0.1;
-
               fight(obj1, obj2);
             }
           }
@@ -151,15 +103,26 @@
       }
 
       function fight(obj1, obj2) {
+        // Determine the winner based on the types of the objects
+        let winner, loser;
         if (
           (obj1.type === "rock" && obj2.type === "scissors") ||
-          (obj1.type === "scissors" && obj2.type === "paper") ||
-          (obj1.type === "paper" && obj2.type === "rock")
+          (obj1.type === "paper" && obj2.type === "rock") ||
+          (obj1.type === "scissors" && obj2.type === "paper")
         ) {
-          obj2.type = obj1.type;
-        } else if (obj2.type !== obj1.type) {
-          obj1.type = obj2.type;
+          winner = obj1;
+          loser = obj2;
+        } else {
+          winner = obj2;
+          loser = obj1;
         }
+
+        // The loser becomes the same type as the winner
+        loser.type = winner.type;
+
+        // The loser adopts the winner's direction
+        loser.dx = winner.dx;
+        loser.dy = winner.dy;
       }
 
       function moveAndDraw() {
@@ -168,23 +131,111 @@
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        let centerX = canvas.width / 2;
+        let centerY = canvas.height / 2;
+        let edgeDistance = 80; // Distance from edge at which the state changes
+
         for (let obj of objects) {
-          // Adjust the direction towards the target direction
-          obj.dx += (obj.targetDirection.dx - obj.dx) * 0.05;
-          obj.dy += (obj.targetDirection.dy - obj.dy) * 0.05;
+          // If there is a nearby object of the same type, adopt its direction and move towards it
+          for (let other of objects) {
+            if (other !== obj && other.type === obj.type) {
+              let distance = Math.sqrt(
+                Math.pow(other.x - obj.x, 2) + Math.pow(other.y - obj.y, 2)
+              );
+              if (distance < 80) {
+                // If the other object is within a certain radius
+                obj.dx += (other.dx - obj.dx) * 0.05;
+                obj.dy += (other.dy - obj.dy) * 0.05;
 
-          // Add a centering force if the object is close to the edge
-          let safeZone = 0.2; // Objects are free within 20% of the canvas size from the center
-          let centerForce = 0.01; // Strength of the centering force
-          let centerX = canvas.width / 2;
-          let centerY = canvas.height / 2;
-          let distanceFromCenter = Math.sqrt(
-            (obj.x - centerX) ** 2 + (obj.y - centerY) ** 2
-          );
+                // Add an attraction force towards the other object
+                let attractionForce = 0.001; // Strength of the attraction force
+                obj.dx += (other.x - obj.x) * attractionForce;
+                obj.dy += (other.y - obj.y) * attractionForce;
 
-          if (distanceFromCenter > canvas.width * safeZone) {
+                break; // Only adopt the direction and move towards the first suitable object found
+              }
+            }
+          }
+
+          // If the object is near an edge and it's currently free, change its state to "centering"
+          if (
+            obj.state === "free" &&
+            (obj.x < edgeDistance ||
+              obj.x > canvas.width - edgeDistance ||
+              obj.y < edgeDistance ||
+              obj.y > canvas.height - edgeDistance)
+          ) {
+            obj.state = "centering";
+          }
+
+          // If the object is centering, move it towards the center
+          if (obj.state === "centering") {
+            let centerForce = 0.01; // Strength of the centering force
             obj.dx += (centerX - obj.x) * centerForce;
             obj.dy += (centerY - obj.y) * centerForce;
+
+            // If the object has reached the center, change its state back to "free"
+            let distanceFromCenter = Math.sqrt(
+              (obj.x - centerX) ** 2 + (obj.y - centerY) ** 2
+            );
+            if (distanceFromCenter < edgeDistance) {
+              obj.state = "free";
+            }
+          } else {
+            // If the object is free and inside the safe zone, let it choose a random direction occasionally
+            if (Math.random() < 0.01) {
+              // 1% chance per frame
+              obj.dx = Math.random() * 2 - 1;
+              obj.dy = Math.random() * 2 - 1;
+            }
+          }
+
+          // If the object is free, it can hunt
+          if (obj.state === "free") {
+            // Find a target to hunt
+            let huntRadius = 200; // The radius within which the object can find targets
+            let target = null; // The current target to hunt
+            for (let other of objects) {
+              // The object can hunt another object if they are different types and the other object's flock strength is less
+              if (
+                other !== obj &&
+                other.type !== obj.type &&
+                other.flockStrength < obj.flockStrength
+              ) {
+                let distance = Math.sqrt(
+                  Math.pow(other.x - obj.x, 2) + Math.pow(other.y - obj.y, 2)
+                );
+                if (distance < huntRadius) {
+                  target = other; // Found a target to hunt
+                  break;
+                }
+              }
+            }
+
+            // If a target was found, move towards it
+            if (target) {
+              let huntForce = 0.01; // Strength of the hunting force
+              obj.dx += (target.x - obj.x) * huntForce;
+              obj.dy += (target.y - obj.y) * huntForce;
+            }
+          }
+
+          for (let other of objects) {
+            if (other !== obj && other.type === obj.type) {
+              let distance = Math.sqrt(
+                Math.pow(other.x - obj.x, 2) + Math.pow(other.y - obj.y, 2)
+              );
+              if (distance < 20) {
+                // If the other object is within a certain radius
+                obj.dx += (other.dx - obj.dx) * 0.05;
+                obj.dy += (other.dy - obj.dy) * 0.05;
+
+                // Add a repulsive force to avoid overlap
+                let repulsiveForce = 0.005; // Strength of the repulsive force
+                obj.dx -= (other.x - obj.x) * repulsiveForce;
+                obj.dy -= (other.y - obj.y) * repulsiveForce;
+              }
+            }
           }
 
           // Normalize the direction
@@ -202,6 +253,20 @@
           }
           if (obj.y - 20 < 0 || obj.y + 20 > canvas.height) {
             obj.dy = -obj.dy;
+          }
+
+          // Update flock strength
+          obj.flockStrength = 1; // Start with 1 (itself)
+          for (let other of objects) {
+            if (other !== obj && other.type === obj.type) {
+              let distance = Math.sqrt(
+                Math.pow(other.x - obj.x, 2) + Math.pow(other.y - obj.y, 2)
+              );
+              if (distance < 80) {
+                // If the other object is within a certain radius
+                obj.flockStrength++;
+              }
+            }
           }
 
           let size;
@@ -240,14 +305,22 @@
             );
           }
 
-          // Draw the object's type above it, adjusted for proximity to the top
+          // Draw the object's flock strength above it
           //   ctx.font = "20px Arial";
           //   ctx.fillStyle = "black";
           //   ctx.textAlign = "center";
-          //   let yOffset = Math.max(10, obj.y - 20);
-          //   ctx.fillText(obj.type, obj.x, yOffset);
+          //   ctx.fillText(obj.flockStrength, obj.x, obj.y - 40); // 40 units above the object
         }
       }
+
+      function updateSafeZone() {
+        let canvas = document.getElementById("gameCanvas");
+        safeZone.x = Math.random() * canvas.width;
+        safeZone.y = Math.random() * canvas.height;
+        setTimeout(updateSafeZone, 2000); // Change the position every 5 seconds
+      }
+
+      updateSafeZone(); // Call the function once to start the loop
 
       // Call these functions every frame
       setInterval(function () {
@@ -257,9 +330,6 @@
     </script>
   </body>
 </html>
-
-
-
 
 <!-- let rockImage = new Image();
 rockImage.src = "https://i.imgur.com/eFxVRgX.png"; // Replace with the URL of your rock image
