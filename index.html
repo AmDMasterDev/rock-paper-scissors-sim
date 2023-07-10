@@ -123,6 +123,7 @@
         // The loser adopts the winner's direction
         loser.dx = winner.dx;
         loser.dy = winner.dy;
+        loser.state = "free";
       }
 
       function moveAndDraw() {
@@ -191,17 +192,13 @@
           }
 
           // If the object is free, it can hunt
-          if (obj.state === "free") {
+          if (obj.state === "free" || obj.state === "centering") {
             // Find a target to hunt
             let huntRadius = 200; // The radius within which the object can find targets
             let target = null; // The current target to hunt
             for (let other of objects) {
-              // The object can hunt another object if they are different types and the other object's flock strength is less
-              if (
-                other !== obj &&
-                other.type !== obj.type &&
-                other.flockStrength < obj.flockStrength
-              ) {
+              // The object can hunt another object if they are different types
+              if (other !== obj && other.type !== obj.type) {
                 let distance = Math.sqrt(
                   Math.pow(other.x - obj.x, 2) + Math.pow(other.y - obj.y, 2)
                 );
@@ -212,11 +209,23 @@
               }
             }
 
-            // If a target was found, move towards it
+            // If a target was found, move towards it if it can be beaten, or move away if it can't be beaten
             if (target) {
-              let huntForce = 0.01; // Strength of the hunting force
-              obj.dx += (target.x - obj.x) * huntForce;
-              obj.dy += (target.y - obj.y) * huntForce;
+              obj.state = "free";
+              let forceStrength = 0.01; // Strength of the force
+              if (
+                (obj.type === "rock" && target.type === "scissors") ||
+                (obj.type === "paper" && target.type === "rock") ||
+                (obj.type === "scissors" && target.type === "paper")
+              ) {
+                // The target can be beaten, move towards it
+                obj.dx += (target.x - obj.x) * forceStrength;
+                obj.dy += (target.y - obj.y) * forceStrength;
+              } else {
+                // The target can't be beaten, move away from it
+                obj.dx -= (target.x - obj.x) * forceStrength;
+                obj.dy -= (target.y - obj.y) * forceStrength;
+              }
             }
           }
 
