@@ -22,19 +22,23 @@
           this.type = type; // "rock", "paper", or "scissors"
           this.dx = Math.random() * 2 - 1; // Horizontal velocity
           this.dy = Math.random() * 2 - 1; // Vertical velocity
+          this.targetDirection = {
+            dx: Math.random() * 2 - 1,
+            dy: Math.random() * 2 - 1,
+          };
           this.squishing = false; // Whether the object is currently squishing
           this.squishStart = 0; // The time at which the object started squishing
         }
       }
 
       let rockImage = new Image();
-      rockImage.src = "https://i.imgur.com/eFxVRgX.png"; // Replace with the URL of your rock image
+      rockImage.src = "icons/rock.png"; // Replace with the URL of your rock image
 
       let paperImage = new Image();
-      paperImage.src = "https://i.imgur.com/ocQ6qCw.png"; // Replace with the URL of your paper image
+      paperImage.src = "icons/paper.png"; // Replace with the URL of your paper image
 
       let scissorsImage = new Image();
-      scissorsImage.src = "https://i.imgur.com/gFIasFb.png"; // Replace with the URL of your scissors image
+      scissorsImage.src = "icons/scissors.png"; // Replace with the URL of your scissors image
 
       window.onload = function () {
         let num = window.prompt(
@@ -125,6 +129,21 @@
                 obj2.squishing = false;
               }, 100);
 
+              let averageDirectionX =
+                (obj1.targetDirection.dx + obj2.targetDirection.dx) / 2;
+              let averageDirectionY =
+                (obj1.targetDirection.dy + obj2.targetDirection.dy) / 2;
+
+              obj1.targetDirection.dx =
+                averageDirectionX + Math.random() * 0.2 - 0.1;
+              obj1.targetDirection.dy =
+                averageDirectionY + Math.random() * 0.2 - 0.1;
+
+              obj2.targetDirection.dx =
+                averageDirectionX + Math.random() * 0.2 - 0.1;
+              obj2.targetDirection.dy =
+                averageDirectionY + Math.random() * 0.2 - 0.1;
+
               fight(obj1, obj2);
             }
           }
@@ -150,6 +169,29 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         for (let obj of objects) {
+          // Adjust the direction towards the target direction
+          obj.dx += (obj.targetDirection.dx - obj.dx) * 0.05;
+          obj.dy += (obj.targetDirection.dy - obj.dy) * 0.05;
+
+          // Add a centering force if the object is close to the edge
+          let safeZone = 0.2; // Objects are free within 20% of the canvas size from the center
+          let centerForce = 0.01; // Strength of the centering force
+          let centerX = canvas.width / 2;
+          let centerY = canvas.height / 2;
+          let distanceFromCenter = Math.sqrt(
+            (obj.x - centerX) ** 2 + (obj.y - centerY) ** 2
+          );
+
+          if (distanceFromCenter > canvas.width * safeZone) {
+            obj.dx += (centerX - obj.x) * centerForce;
+            obj.dy += (centerY - obj.y) * centerForce;
+          }
+
+          // Normalize the direction
+          let length = Math.sqrt(obj.dx * obj.dx + obj.dy * obj.dy);
+          obj.dx /= length;
+          obj.dy /= length;
+
           // Move the object in its current direction
           obj.x += obj.dx;
           obj.y += obj.dy;
@@ -215,3 +257,15 @@
     </script>
   </body>
 </html>
+
+
+
+
+<!-- let rockImage = new Image();
+rockImage.src = "https://i.imgur.com/eFxVRgX.png"; // Replace with the URL of your rock image
+
+let paperImage = new Image();
+paperImage.src = "https://i.imgur.com/ocQ6qCw.png"; // Replace with the URL of your paper image
+
+let scissorsImage = new Image();
+scissorsImage.src = "https://i.imgur.com/gFIasFb.png"; // Replace with the URL of your scissors image -->
