@@ -3,8 +3,8 @@
   <style>
     #gameCanvas {
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 10%;
+      left: 10%;
     }
   </style>
   <body>
@@ -27,8 +27,8 @@
         );
 
         let canvas = document.getElementById("gameCanvas");
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth * 0.8;
+        canvas.height = window.innerHeight * 0.8;
 
         if (num !== null) {
           spawnObjects(num);
@@ -40,12 +40,18 @@
       function spawnObjects(num) {
         objects = []; // Clear the existing objects
 
+        let canvas = document.getElementById("gameCanvas");
+        let spawnAreaX = canvas.width * 0.8; // 80% of canvas width
+        let spawnAreaY = canvas.height * 0.8; // 80% of canvas height
+        let offsetX = canvas.width * 0.1; // 10% of canvas width
+        let offsetY = canvas.height * 0.1; // 10% of canvas height
+
         for (let i = 0; i < num; i++) {
           // Spawn a rock
           objects.push(
             new GameObject(
-              Math.random() * window.innerWidth,
-              Math.random() * window.innerHeight,
+              Math.random() * spawnAreaX + offsetX,
+              Math.random() * spawnAreaY + offsetY,
               "rock"
             )
           );
@@ -53,8 +59,8 @@
           // Spawn a paper
           objects.push(
             new GameObject(
-              Math.random() * window.innerWidth,
-              Math.random() * window.innerHeight,
+              Math.random() * spawnAreaX + offsetX,
+              Math.random() * spawnAreaY + offsetY,
               "paper"
             )
           );
@@ -62,8 +68,8 @@
           // Spawn a scissors
           objects.push(
             new GameObject(
-              Math.random() * window.innerWidth,
-              Math.random() * window.innerHeight,
+              Math.random() * spawnAreaX + offsetX,
+              Math.random() * spawnAreaY + offsetY,
               "scissors"
             )
           );
@@ -79,8 +85,16 @@
               Math.pow(obj2.x - obj1.x, 2) + Math.pow(obj2.y - obj1.y, 2)
             );
 
-            if (distance < 50) {
-              // Change this value based on how close you want them to be to "fight"
+            if (distance < 40) {
+              // Considering the radius of the objects
+              let angle = Math.atan2(obj2.y - obj1.y, obj2.x - obj1.x);
+
+              obj1.dx = -Math.cos(angle);
+              obj1.dy = -Math.sin(angle);
+
+              obj2.dx = Math.cos(angle);
+              obj2.dy = Math.sin(angle);
+
               fight(obj1, obj2);
             }
           }
@@ -111,10 +125,10 @@
           obj.y += obj.dy;
 
           // If the object hits the edge of the canvas, make it bounce back
-          if (obj.x < 0 || obj.x > canvas.width) {
+          if (obj.x - 20 < 0 || obj.x + 20 > canvas.width) {
             obj.dx = -obj.dx;
           }
-          if (obj.y < 0 || obj.y > canvas.height) {
+          if (obj.y - 20 < 0 || obj.y + 20 > canvas.height) {
             obj.dy = -obj.dy;
           }
 
@@ -134,7 +148,7 @@
           ctx.font = "14px Arial";
           ctx.fillStyle = "black";
           ctx.textAlign = "center";
-          ctx.fillText(obj.type, obj.x, obj.y - 25); // 30 pixels above the object
+          ctx.fillText(obj.type, obj.x, obj.y - 25); // drawing the label 25 pixels above the circle
         }
       }
 
