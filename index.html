@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html>
   <style>
+    * {
+      background-color: rgb(89, 89, 89);
+    }
+
     #gameCanvas {
       position: absolute;
       top: 10%;
@@ -18,8 +22,19 @@
           this.type = type; // "rock", "paper", or "scissors"
           this.dx = Math.random() * 2 - 1; // Horizontal velocity
           this.dy = Math.random() * 2 - 1; // Vertical velocity
+          this.squishing = false; // Whether the object is currently squishing
+          this.squishStart = 0; // The time at which the object started squishing
         }
       }
+
+      let rockImage = new Image();
+      rockImage.src = "/icons/rock.png"; // Replace with the URL of your rock image
+
+      let paperImage = new Image();
+      paperImage.src = "/icons/paper.png"; // Replace with the URL of your paper image
+
+      let scissorsImage = new Image();
+      scissorsImage.src = "/icons/scissors.png"; // Replace with the URL of your scissors image
 
       window.onload = function () {
         let num = window.prompt(
@@ -76,6 +91,10 @@
         }
       }
 
+      function lerp(start, end, t) {
+        return start * (1 - t) + end * t;
+      }
+
       function checkCollision() {
         for (let i = 0; i < objects.length; i++) {
           for (let j = i + 1; j < objects.length; j++) {
@@ -94,6 +113,17 @@
 
               obj2.dx = Math.cos(angle);
               obj2.dy = Math.sin(angle);
+
+              obj1.squishing = true;
+              obj1.squishStart = Date.now();
+
+              obj2.squishing = true;
+              obj2.squishStart = Date.now();
+
+              setTimeout(() => {
+                obj1.squishing = false;
+                obj2.squishing = false;
+              }, 100);
 
               fight(obj1, obj2);
             }
@@ -132,23 +162,48 @@
             obj.dy = -obj.dy;
           }
 
-          // Draw the object
-          ctx.beginPath();
-          ctx.arc(obj.x, obj.y, 20, 0, Math.PI * 2); // Change these numbers to adjust the size of the objects
-          if (obj.type === "rock") {
-            ctx.fillStyle = "red";
-          } else if (obj.type === "paper") {
-            ctx.fillStyle = "green";
-          } else if (obj.type === "scissors") {
-            ctx.fillStyle = "blue";
+          let size;
+          if (obj.squishing) {
+            let t = (Date.now() - obj.squishStart) / 200; // How far along in the squishing animation we are
+            size = lerp(50, 30, t); // Interpolate between 40 and 60 based on t
+          } else {
+            size = 50;
           }
-          ctx.fill();
 
-          // Draw the object's type above it
-          ctx.font = "14px Arial";
-          ctx.fillStyle = "black";
-          ctx.textAlign = "center";
-          ctx.fillText(obj.type, obj.x, obj.y - 25); // drawing the label 25 pixels above the circle
+          // Draw the object
+          //   let size = obj.squishing ? 60 : 40; // The object is 50% bigger when squishing
+          if (obj.type === "rock") {
+            ctx.drawImage(
+              rockImage,
+              obj.x - size / 2,
+              obj.y - size / 2,
+              size,
+              size
+            );
+          } else if (obj.type === "paper") {
+            ctx.drawImage(
+              paperImage,
+              obj.x - size / 2,
+              obj.y - size / 2,
+              size,
+              size
+            );
+          } else if (obj.type === "scissors") {
+            ctx.drawImage(
+              scissorsImage,
+              obj.x - size / 2,
+              obj.y - size / 2,
+              size,
+              size
+            );
+          }
+
+          // Draw the object's type above it, adjusted for proximity to the top
+          //   ctx.font = "20px Arial";
+          //   ctx.fillStyle = "black";
+          //   ctx.textAlign = "center";
+          //   let yOffset = Math.max(10, obj.y - 20);
+          //   ctx.fillText(obj.type, obj.x, yOffset);
         }
       }
 
